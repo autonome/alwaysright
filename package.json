@@ -6,5 +6,8 @@
     "fullName": "Always Right", 
     "id": "jid0-SzimoL45Ib8OddgoUBG0buQmjec@jetpack",
     "description": "Firefox add-on that always opens new tabs immediately to the right of the active tab.",
-    "main": "lib/main.js"
+    "main": "lib/main.js",
+    "permissions": {
+        "private-browsing": true
+    }
 }
