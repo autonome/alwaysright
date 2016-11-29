@@ -1,13 +1,12 @@
 {
-    "name": "alwaysright", 
-    "license": "MPL 1.1/GPL 2.0/LGPL 2.1", 
-    "author": "Dietrich Ayala", 
-    "version": "1.5.1", 
-    "fullName": "Always Right", 
-    "id": "jid0-SzimoL45Ib8OddgoUBG0buQmjec@jetpack",
-    "description": "Firefox add-on that always opens new tabs immediately to the right of the active tab.",
-    "main": "lib/main.js",
-    "permissions": {
-        "private-browsing": true
-    }
+  "manifest_version": 2,
+  "name": "Always Right",
+  "version": "1.7.0",
+  "description": "Firefox add-on that always opens new tabs immediately to the right of the active tab.",
+  "background" : {
+    "scripts": ["index.js"]
+  },
+  "permissions": [
+    "tabs"
+  ]
 }
