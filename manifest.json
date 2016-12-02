@@ -1,4 +1,9 @@
 {
+  "applications": {
+    "gecko": {
+      "id": "{0b546cd7-c403-4a45-843a-40391597bc36}"
+    }
+  },
   "manifest_version": 2,
   "name": "Always Right",
   "version": "1.7.0",
