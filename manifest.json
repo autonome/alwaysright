@@ -1,12 +1,12 @@
 {
   "applications": {
     "gecko": {
-      "id": "{0b546cd7-c403-4a45-843a-40391597bc36}"
+      "id": "jid0-SzimoL45Ib8OddgoUBG0buQmjec@jetpack"
     }
   },
   "manifest_version": 2,
   "name": "Always Right",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Firefox add-on that always opens new tabs immediately to the right of the active tab.",
   "background" : {
     "scripts": ["index.js"]
