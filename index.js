@@ -18,5 +18,8 @@ browser.tabs.onActivated.addListener(function(activeInfo) {
 // Any time a new tab is created, set it's index to the index
 // of the active tab, plus one.
 browser.tabs.onCreated.addListener(function(newTab) {
-  browser.tabs.move(newTab.id, { index: activeTab.index + 1 });
+  var targetIndex = activeTab.index + 1;
+  if (newTab.index != targetIndex) {
+    browser.tabs.move(newTab.id, { index: activeTab.index + 1 });
+  }
 });
