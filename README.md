@@ -6,5 +6,5 @@ Sure, if I wanted to strictly manage things, I could always have separate Panora
 
 So maybe this isn't for you, but I'm Always Right.
 
-<p><a href="http://j.mp/i7oxhO">Install</a></p>
-<p><a href="http://j.mp/dVIgM0">Source on Github</a></p>
+<p><a href="https://addons.mozilla.org/en-us/firefox/addon/always-right/">Install</a></p>
+<p><a href="https://github.com/autonome/Always-Right</a></p>
