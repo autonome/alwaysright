@@ -5,8 +5,8 @@ var activeTab = null;
 function updateActiveTab() {
   browser.tabs.query({currentWindow: true, active: true}).then(function(tabs) {
     browser.tabs.get(tabs[0].id).then(function(tab) {
-      if (!activeTab) {
-        initEventHandlers(tab);
+      if (activeTab === null) {
+        initEventHandlers();
       }
       activeTab = tab;
     });
@@ -79,7 +79,7 @@ function makeRight(newTab) {
     browser.tabs.move(newTab.id, { index: targetIndex }).then(function(t) {
       // woohoo.
     }, function(e) {
-      console.log('AlwaysRight: tab move fail', e);
+      console.error('AlwaysRight: tab move fail', e);
     });
   });
 }
