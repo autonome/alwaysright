@@ -1,0 +1,19 @@
+{
+  "name": "Always Right",
+  "description": "Chromium Extension that always opens new tabs immediately to the right of the active tab.",
+  "author": "Dietrich Ayala",
+  "version": "1.0.0",
+  "background" : {
+    "scripts": ["index.js"]
+  },
+  "permissions": [
+    "tabs"
+  ],
+  "manifest_version": 2,
+  "homepage_url": "https://github.com/autonome/Always-Right",
+  "icons": {
+    "16": "always-right-icon-16x16.png",
+    "48": "always-right-icon-48x48.png",
+    "128": "always-right-icon-128x128.png"
+  }
+}
