@@ -1,19 +1,20 @@
 {
   "name": "Always Right",
-  "description": "Firefox add-on that always opens new tabs immediately to the right of the active tab.",
+  "description": "Alway open new tabs immediately to the right of the active tab.",
   "author": "Dietrich Ayala",
-  "version": "2.0.7",
+  "version": "3.0.0",
   "applications": {
     "gecko": {
       "id": "jid0-SzimoL45Ib8OddgoUBG0buQmjec@jetpack"
     }
   },
-  "background" : {
-    "scripts": ["index.js"]
+  "background": {
+    "scripts": ["service_worker.js"]
   },
   "permissions": [
     "tabs",
     "browserSettings"
   ],
-  "manifest_version": 2
+  "manifest_version": 3,
+  "content_security_policy": {}
 }
