@@ -1,0 +1,19 @@
+{
+  "name": "alwaysright",
+  "version": "1.0.0",
+  "description": "New tabs should always open to the immediate right of the current tab. And now they will.",
+  "scripts": {
+    "chrome": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome\" chrome://extensions/",
+    "firefox": "cp manifest-firefox.json manifest.json && web-ext run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autonome/alwaysright.git"
+  },
+  "author": "Dietrich Ayala <autonome@gmail.com> (https://metafluff.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/autonome/alwaysright/issues"
+  },
+  "homepage": "https://github.com/autonome/alwaysright#readme"
+}

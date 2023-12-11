@@ -1,6 +1,6 @@
 {
   "name": "Always Right",
-  "description": "Alway open new tabs immediately to the right of the active tab.",
+  "description": "Always open new tabs immediately to the right of the active tab.",
   "author": "Dietrich Ayala",
   "version": "3.0.0",
   "browser_specific_settings": {

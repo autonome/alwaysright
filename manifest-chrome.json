@@ -11,9 +11,9 @@
   "manifest_version": 3,
   "homepage_url": "https://github.com/autonome/always-right",
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "always-right-icon-16x16.png",
+    "48": "always-right-icon-48x48.png",
+    "128": "always-right-icon-128x128.png"
   },
   "content_security_policy": {}
 }
