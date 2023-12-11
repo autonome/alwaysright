@@ -7,7 +7,6 @@
     "service_worker": "service_worker.js"
   },
   "permissions": [
-    "tabs"
   ],
   "manifest_version": 3,
   "homepage_url": "https://github.com/autonome/always-right",
