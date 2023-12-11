@@ -1,9 +1,12 @@
+// browser (Firefox) vs chrome (Chromium)
+const api = typeof chrome != "undefined" ? chrome : browser;
+
 (async () => {
-  if (browser.browserSettings.newTabPosition) {
+  if (api.browserSettings.newTabPosition) {
     const RIGHT = 'afterCurrent';
-    let pref = await browser.browserSettings.newTabPosition.get({});
+    let pref = await api.browserSettings.newTabPosition.get({});
     if (pref.value != RIGHT) {
-      await browser.browserSettings.newTabPosition.set({
+      await api.browserSettings.newTabPosition.set({
         value: RIGHT
       });
     }
@@ -19,7 +22,7 @@ function oldSchool() {
 
   // Update cached ref to active tab
   function updateActiveTab() {
-    browser.tabs.query({currentWindow: true, active: true}).then(function(tabs) {
+    api.tabs.query({currentWindow: true, active: true}).then(function(tabs) {
       if (activeTab === null) {
         initEventHandlers();
       }
@@ -36,20 +39,20 @@ function oldSchool() {
   function initEventHandlers() {
     // Update reference to active tab any time there's a tab
     // activated event.
-    browser.tabs.onActivated.addListener(function(activeInfo) {
-      browser.tabs.get(activeInfo.tabId).then(function(tabInfo) {
+    api.tabs.onActivated.addListener(function(activeInfo) {
+      api.tabs.get(activeInfo.tabId).then(function(tabInfo) {
         activeTab = tabInfo;
       });
     });
 
     // Any time a new tab is created, set its index to the index
     // of the active tab, plus one.
-    browser.tabs.onCreated.addListener(makeRight);
+    api.tabs.onCreated.addListener(makeRight);
 
     // ODD. If instead of this, I get a fresh reference to the active tab
     // right before moving, it still has stale index!!
     // Soooo, I guess we're doing this.
-    browser.tabs.onMoved.addListener(updateActiveTab);
+    api.tabs.onMoved.addListener(updateActiveTab);
   }
 
   // Move the referenced tab to the immediate right of the active tab,
@@ -75,7 +78,7 @@ function oldSchool() {
 
     // We need current window for a few things required for correct tab placement.
     // And apparently tab references go STALE. Dammit.
-    browser.windows.getCurrent({populate: true}).then(function(win) {
+    api.windows.getCurrent({populate: true}).then(function(win) {
 
       // Maybe is a restored tab, or another add-on, or something else is wonky.
       if (newTab.index < win.tabs.length - 1
@@ -90,7 +93,7 @@ function oldSchool() {
       }
 
       // YOU GOT TO MOVE IT MOVE IT
-      browser.tabs.move(newTab.id, { index: targetIndex }).then(function(t) {
+      api.tabs.move(newTab.id, { index: targetIndex }).then(function(t) {
         // woohoo.
       }, function(e) {
         console.error('AlwaysRight: tab move fail', e);
