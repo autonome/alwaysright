@@ -1,22 +1,32 @@
 // browser (Firefox) vs chrome (Chromium)
-const api = typeof chrome != "undefined" ? chrome : browser;
+const api = typeof chrome != 'undefined' ? chrome : browser;
 
-(async () => {
-  if (api.browserSettings.newTabPosition) {
+// new firefoxen have a setting for this
+const tryInsertAfter = new Promise((resolve, reject) => {
+  // test for the setting
+  if (api.hasOwnProperty('browserSettings')
+      && api.browserSettings.newTabPosition) {
     const RIGHT = 'afterCurrent';
-    let pref = await api.browserSettings.newTabPosition.get({});
-    if (pref.value != RIGHT) {
-      await api.browserSettings.newTabPosition.set({
-        value: RIGHT
-      });
-    }
-  }
-  else {
-    oldSchool();
-  }
-})();
+    // check the setting value
+    api.browserSettings.newTabPosition.get({}).then(pref => {
+      // update the setting value if not set to always add to the right
+      if (pref.value != RIGHT) {
+        api.browserSettings.newTabPosition.set({
+          value: RIGHT
+        });
+      }
+    });
 
-function oldSchool() {
+    resolve();
+  }
+  // no settings object (chromium)
+  // or no setting (older firefox)
+  else {
+    reject();
+  }
+});
+
+const init = () => {
   // Reference to the active tab
   var activeTab = null;
 
@@ -110,4 +120,6 @@ function oldSchool() {
       }
     }
   }
-}
+};
+
+tryInsertAfter.then(() => /* newer firefox */ true, init);

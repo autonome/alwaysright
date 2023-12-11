@@ -1,10 +1,13 @@
-(async () => {
+// browser (Firefox) vs chrome (Chromium)
+const api = typeof chrome != "undefined" ? chrome : browser;
+
+const init => () {
   // Reference to the active tab
   var activeTab = null;
 
   // Update cached ref to active tab
   function updateActiveTab() {
-    chrome.tabs.query({'active': true}, function(tabs) {
+    api.tabs.query({'active': true}, function(tabs) {
       if (activeTab === null) {
         initEventHandlers();
       }
@@ -21,20 +24,20 @@
   function initEventHandlers() {
     // Update reference to active tab any time there's a tab
     // activated event.
-    chrome.tabs.onActivated.addListener(function(activeInfo) {
-      chrome.tabs.get(activeInfo.tabId, function(tabInfo) {
+    api.tabs.onActivated.addListener(function(activeInfo) {
+      api.tabs.get(activeInfo.tabId, function(tabInfo) {
         activeTab = tabInfo;
       });
     });
 
     // Any time a new tab is created, set its index to the index
     // of the active tab, plus one.
-    chrome.tabs.onCreated.addListener(makeRight);
+    api.tabs.onCreated.addListener(makeRight);
 
     // ODD. If instead of this, I get a fresh reference to the active tab
     // right before moving, it still has stale index!!
     // Soooo, I guess we're doing this.
-    chrome.tabs.onMoved.addListener(updateActiveTab);
+    api.tabs.onMoved.addListener(updateActiveTab);
   }
 
   // Move the referenced tab to the immediate right of the active tab,
@@ -60,7 +63,7 @@
 
     // We need current window for a few things required for correct tab placement.
     // And apparently tab references go STALE. Dammit.
-    chrome.windows.getCurrent({'populate': true}, function(win) {
+    api.windows.getCurrent({'populate': true}, function(win) {
 
       // Maybe is a restored tab, or another add-on, or something else is wonky.
       if (newTab.index < win.tabs.length - 1
@@ -75,7 +78,7 @@
       }
 
       // YOU GOT TO MOVE IT MOVE IT
-      chrome.tabs.move(newTab.id, { index: targetIndex }, function(t) {
+      api.tabs.move(newTab.id, { index: targetIndex }, function(t) {
         // woohoo.
       });
     });
@@ -90,4 +93,6 @@
       }
     }
   }
-})();
+};
+
+init();
