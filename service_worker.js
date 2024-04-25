@@ -1,9 +1,22 @@
 // browser (Firefox) vs chrome (Chromium)
-const api = typeof chrome != 'undefined' ? chrome : browser;
+const isChrome = typeof chrome != 'undefined';
+const api = isChrome ? chrome : browser;
+
+// attempt working around poor chrome behavior due to
+// https://issues.chromium.org/issues/40805401
+if (isChrome) {
+  // https://stackoverflow.com/questions/66618136/persistent-service-worker-in-chrome-extension
+  const keepAlive = () => {
+    setInterval(api.runtime.getPlatformInfo, 20000);
+  };
+  api.runtime.onStartup.addListener(keepAlive);
+  keepAlive();
+}
 
 // new firefoxen have a setting for this
 const tryInsertAfter = new Promise((resolve, reject) => {
-  // test for the setting
+  // test for the settings api
+  // and the setting itself
   if (api.hasOwnProperty('browserSettings')
       && api.browserSettings.newTabPosition) {
     const RIGHT = 'afterCurrent';
@@ -19,11 +32,10 @@ const tryInsertAfter = new Promise((resolve, reject) => {
 
     resolve();
   }
+
   // no settings object (chromium)
   // or no setting (older firefox)
-  else {
-    reject();
-  }
+  reject();
 });
 
 const init = () => {
@@ -31,7 +43,7 @@ const init = () => {
   var activeTab = null;
 
   // Update cached ref to active tab
-  function updateActiveTab() {
+  function cacheActiveTab() {
     api.tabs.query({currentWindow: true, active: true}).then(function(tabs) {
       if (activeTab === null) {
         initEventHandlers();
@@ -41,11 +53,11 @@ const init = () => {
   }
 
   // Get active tab reference on startup
-  updateActiveTab();
+  cacheActiveTab();
 
   // As getting active tab id at startup is async, really start our own
   // activity until we actually have it.
-  // This is called in updateActiveTab if activeTab is null.
+  // This is called in cacheActiveTab if activeTab is null.
   function initEventHandlers() {
     // Update reference to active tab any time there's a tab
     // activated event.
@@ -62,7 +74,7 @@ const init = () => {
     // ODD. If instead of this, I get a fresh reference to the active tab
     // right before moving, it still has stale index!!
     // Soooo, I guess we're doing this.
-    api.tabs.onMoved.addListener(updateActiveTab);
+    api.tabs.onMoved.addListener(cacheActiveTab);
   }
 
   // Move the referenced tab to the immediate right of the active tab,
@@ -78,6 +90,7 @@ const init = () => {
       return;
     }
 
+    // To the right
     var targetIndex = activeTab.index + 1;
 
     // Only bother moving if it wouldn't organically be placed immediately to the
@@ -89,7 +102,6 @@ const init = () => {
     // We need current window for a few things required for correct tab placement.
     // And apparently tab references go STALE. Dammit.
     api.windows.getCurrent({populate: true}).then(function(win) {
-
       // Maybe is a restored tab, or another add-on, or something else is wonky.
       if (newTab.index < win.tabs.length - 1
           || newTab.index > win.tabs.length - 1) {
@@ -123,3 +135,4 @@ const init = () => {
 };
 
 tryInsertAfter.then(() => /* newer firefox */ true, init);
+

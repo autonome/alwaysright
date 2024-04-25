@@ -4,6 +4,7 @@
   "description": "New tabs should always open to the immediate right of the current tab. And now they will.",
   "scripts": {
     "chrome": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome\" chrome://extensions/",
+    "canary": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome Canary\" chrome://extensions/",
     "firefox": "cp manifest-firefox.json manifest.json && web-ext run"
   },
   "repository": {
