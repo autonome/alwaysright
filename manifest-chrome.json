@@ -2,7 +2,7 @@
   "name": "Always Right",
   "description": "Always open new tabs immediately to the right of the active tab.",
   "author": "Dietrich Ayala",
-  "version": "2.0.1",
+  "version": "3.0.1",
   "background": {
     "service_worker": "service_worker.js"
   },

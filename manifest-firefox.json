@@ -2,7 +2,7 @@
   "name": "Always Right",
   "description": "Always open new tabs immediately to the right of the active tab.",
   "author": "Dietrich Ayala",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "browser_specific_settings": {
     "gecko": {
       "id": "jid0-SzimoL45Ib8OddgoUBG0buQmjec@jetpack"

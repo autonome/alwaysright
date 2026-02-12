@@ -5,7 +5,12 @@
   "scripts": {
     "chrome": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome\" chrome://extensions/",
     "canary": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome Canary\" chrome://extensions/",
-    "firefox": "cp manifest-firefox.json manifest.json && web-ext run"
+    "firefox": "cp manifest-firefox.json manifest.json && web-ext run",
+    "test": "npx playwright test",
+    "test:chrome": "node scripts/chrome-test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
   },
   "repository": {
     "type": "git",

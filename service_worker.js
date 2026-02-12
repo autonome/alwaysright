@@ -28,27 +28,21 @@ const tryBrowserPref = async () =>{
   return true;
 };
 
-// Get and cache the currently active tab.
-//
-// We do this because browsers have race conditions and various quirks
-// and caching the active tab generally works around them.
+// Cache the active tab. Populated only via onActivated, so it stays null
+// until Chrome activates a tab — which naturally gates makeRight() during
+// session restore (onCreated fires before onActivated).
 let activeTabCache = null;
-const getActiveTab = async () => {
-  if (activeTabCache === null) {
-    // Update cache anytime active changes
-    api.tabs.onCreated.addListener(newTab => (activeTabCache = newTab));
-    // Get currently active tab
-    const tabs = await api.tabs.query({ currentWindow: true, active: true });
-    activeTabCache = tabs[0];
-  }
-  return activeTabCache;
-};
+api.tabs.onActivated.addListener(async (activeInfo) => {
+  activeTabCache = await api.tabs.get(activeInfo.tabId);
+});
 
 // Move the referenced tab to the immediate right of the active tab,
 // or to the immediate right of the last pinned tab.
 const makeRight = async newTab => {
-  // Get currently active tab
-  const activeTab = await getActiveTab();
+  // No active tab yet — still in session restore or pre-interaction.
+  if (!activeTabCache) return;
+
+  const activeTab = activeTabCache;
 
   // The new tab either dragged to new window or something went wrong.
   if (newTab.windowId != activeTab.windowId) {
@@ -97,9 +91,10 @@ const getFirstNonPinnedTab = win => {
   }
 }
 
-// Try native Firefox setting first, fall back to manual tab management
-if (!tryBrowserPref()) {
-  // Any time a new tab is created, set its index to the index
-  // of the active tab, plus one.
-  api.tabs.onCreated.addListener(makeRight);
-}
+// Try native Firefox setting (fire-and-forget for Firefox, no-op on Chrome)
+tryBrowserPref();
+
+// Always register manual tab management as fallback.
+// On Firefox with browserSettings support, the tab is already placed correctly
+// and makeRight() returns early via the targetIndex check.
+api.tabs.onCreated.addListener(makeRight);
