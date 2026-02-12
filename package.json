@@ -6,6 +6,7 @@
     "chrome": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome\" chrome://extensions/",
     "canary": "cp manifest-chrome.json manifest.json && open -a \"Google Chrome Canary\" chrome://extensions/",
     "firefox": "cp manifest-firefox.json manifest.json && web-ext run",
+    "build:chrome": "cp manifest-chrome.json manifest.json && zip -r alwaysright-chrome.zip manifest.json service_worker.js always-right-icon-*.png README.md",
     "test": "npx playwright test",
     "test:chrome": "node scripts/chrome-test.js"
   },
