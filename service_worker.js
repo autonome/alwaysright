@@ -28,9 +28,9 @@ const tryBrowserPref = async () =>{
   return true;
 };
 
-// Cache the active tab. Populated only via onActivated, so it stays null
-// until Chrome activates a tab — which naturally gates makeRight() during
-// session restore (onCreated fires before onActivated).
+// Cache the active tab. Populated via onActivated and rehydrated on demand
+// in makeRight() after the service worker restarts — onActivated only fires
+// on tab switches, not on SW wake.
 let activeTabCache = null;
 api.tabs.onActivated.addListener(async (activeInfo) => {
   activeTabCache = await api.tabs.get(activeInfo.tabId);
@@ -39,10 +39,20 @@ api.tabs.onActivated.addListener(async (activeInfo) => {
 // Move the referenced tab to the immediate right of the active tab,
 // or to the immediate right of the last pinned tab.
 const makeRight = async newTab => {
-  // No active tab yet — still in session restore or pre-interaction.
-  if (!activeTabCache) return;
+  // No active tab cached — service worker was just woken up by this event.
+  // Repopulate from the current window so we don't drop the first tab opened
+  // after an SW restart.
+  if (!activeTabCache) {
+    const [t] = await api.tabs.query({ active: true, windowId: newTab.windowId });
+    if (!t) return;
+    activeTabCache = t;
+  }
 
-  const activeTab = activeTabCache;
+  // Refetch — tab references go STALE. Dammit.
+  let activeTab;
+  try {
+    activeTab = await api.tabs.get(activeTabCache.id);
+  } catch (e) { return; }
 
   // The new tab either dragged to new window or something went wrong.
   if (newTab.windowId != activeTab.windowId) {
@@ -52,25 +62,25 @@ const makeRight = async newTab => {
   // To the right
   let targetIndex = activeTab.index + 1;
 
-  // Only bother moving if it wouldn't organically be placed immediately to the
-  // right of the active tab.
-  if (newTab.index == targetIndex) {
-    return;
-  }
-
   // We need current window for a few things required for correct tab placement.
-  // And apparently tab references go STALE. Dammit.
-  const win = await api.windows.getCurrent({ populate: true });
-
-  // Maybe is a restored tab, or another add-on, or something else is wonky.
-  if (newTab.index < win.tabs.length - 1 || newTab.index > win.tabs.length - 1) {
-    return;
-  }
+  const win = await api.windows.get(newTab.windowId, { populate: true });
 
   // If the active tab is pinned, we have to set the target index
   // to that of the first non-pinned tab.
   if (activeTab.pinned) {
     targetIndex = getFirstNonPinnedTab(win).index;
+  }
+
+  // Refetch — the event-payload index is stale by now.
+  let freshNewTab;
+  try {
+    freshNewTab = await api.tabs.get(newTab.id);
+  } catch (e) { return; }
+
+  // Only bother moving if it wouldn't organically be placed immediately to the
+  // right of the active tab.
+  if (freshNewTab.index == targetIndex) {
+    return;
   }
 
   // YOU GOT TO MOVE IT MOVE IT
