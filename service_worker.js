@@ -123,9 +123,10 @@ const makeRight = async newTab => {
   }
 
   // Refetch — tab references go STALE. Dammit.
-  const [activeTab, freshNewTab] = await Promise.all([
+  const [activeTab, freshNewTab, win] = await Promise.all([
     safeGetTab(activeTabCache.id),
     safeGetTab(newTab.id),
+    api.windows.get(newTab.windowId, { populate: true }),
   ]);
   if (!activeTab || !freshNewTab) return;
 
@@ -139,13 +140,19 @@ const makeRight = async newTab => {
   // onUpdated milliseconds later — if the tab is now in a group, leave it.
   if (isInGroup(freshNewTab)) return;
 
+  // Skip tabs Chrome placed somewhere specific. A fresh user-initiated tab
+  // (Ctrl+T, click "+") always lands at the end of the strip; anything else
+  // (Ctrl+Shift+T or "Reopen closed tab" restoring to original position,
+  // middle-click placed adjacent to opener) represents intentional placement
+  // that we shouldn't override.
+  if (freshNewTab.index !== win.tabs.length - 1) return;
+
   // To the right
   let targetIndex = activeTab.index + 1;
 
   // If the active tab is pinned, we have to set the target index
   // to that of the first non-pinned tab.
   if (activeTab.pinned) {
-    const win = await api.windows.get(newTab.windowId, { populate: true });
     targetIndex = getFirstNonPinnedTab(win).index;
   }
 
