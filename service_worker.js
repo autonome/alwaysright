@@ -1,3 +1,6 @@
+// Always Right service_worker.js
+// Copyright (C) 2025 Dietrich Ayala
+// SPDX-License-Identifier: GPL-3.0-or-later
 // browser (Firefox) vs chrome (Chromium)
 const isChrome = typeof chrome != 'undefined';
 const api = isChrome ? chrome : browser;
