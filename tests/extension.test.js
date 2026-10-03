@@ -15,14 +15,22 @@ test.beforeAll(async () => {
   const swSource = fs.readFileSync(path.join(EXT_PATH, 'service_worker.js'), 'utf8');
   fs.writeFileSync(
     path.join(EXT_PATH, 'test_service_worker.js'),
-    swSource + '\nself.__test = { getCache: () => activeTabCache, resetCache: () => { activeTabCache = null; } };\n'
+    swSource + `
+self.__test = {
+  // Simulate a fresh browser session: gate closed, no state persisted.
+  resetGate: () => clearGate(),
+  // Simulate MV3 service-worker termination: in-memory state is lost,
+  // storage.session survives.
+  simulateRestart: () => { gateOpen = false; activeTabsPromise = null; },
+};
+`
   );
 
   // Test manifest: Chrome + tabs permission + test service worker
   const manifest = JSON.parse(
     fs.readFileSync(path.join(EXT_PATH, 'manifest-chrome.json'), 'utf8')
   );
-  manifest.permissions = ['tabs'];
+  manifest.permissions = [...new Set([...manifest.permissions, 'tabs'])];
   manifest.background.service_worker = 'test_service_worker.js';
   fs.writeFileSync(
     path.join(EXT_PATH, 'manifest.json'),
@@ -155,12 +163,11 @@ test.describe('startup guard (session restore simulation)', () => {
     try {
       const sw = await getServiceWorker(ctx);
 
-      // Reset cache to null to simulate startup state (before any onActivated).
-      // In headless mode the cache may already be null; this ensures it regardless.
-      await sw.evaluate(() => self.__test.resetCache());
+      // Close the gate to simulate startup state (before any user activation).
+      await sw.evaluate(() => self.__test.resetGate());
 
       // Create tabs with active:false — like session restore does.
-      // With null cache, makeRight() should return early and NOT move them.
+      // With the gate closed, makeRight() should return early and NOT move them.
       await sw.evaluate(async (base) => {
         for (const id of ['s1', 's2', 's3', 's4', 's5']) {
           await chrome.tabs.create({ url: `${base}/${id}`, active: false });
@@ -193,17 +200,19 @@ test.describe('startup guard (session restore simulation)', () => {
       const p3 = await ctx.newPage();
       await p3.goto(`${baseUrl}/c`);
 
-      // Reset cache to simulate startup
-      await sw.evaluate(() => self.__test.resetCache());
+      // Close the gate to simulate startup
+      await sw.evaluate(() => self.__test.resetGate());
 
-      // Create "restored" tabs — should NOT be moved (cache is null)
+      // Create "restored" tabs — should NOT be moved (gate is closed)
       await sw.evaluate(async (base) => {
         await chrome.tabs.create({ url: `${base}/s1`, active: false });
         await chrome.tabs.create({ url: `${base}/s2`, active: false });
       }, baseUrl);
-      await delay(500);
+      // Wait out the creation-burst window so the switch below reads as a
+      // user action rather than part of the restore.
+      await delay(1500);
 
-      // Now switch to /a — this fires onActivated, populating the cache
+      // Now switch to /a — this fires onActivated, opening the gate
       await ctx.pages()[0].bringToFront();
       await delay(500);
 
@@ -216,6 +225,144 @@ test.describe('startup guard (session restore simulation)', () => {
 
       // New blank tab should be right after /a
       expect(urls[aIdx + 1]).not.toContain(baseUrl);
+    } finally {
+      await ctx.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// Build [/a, /b, /c] in the first window and let the gate open.
+async function setupABC(ctx) {
+  await ctx.pages()[0].goto(`${baseUrl}/a`);
+  const pageB = await ctx.newPage();
+  await pageB.goto(`${baseUrl}/b`);
+  const pageC = await ctx.newPage();
+  await pageC.goto(`${baseUrl}/c`);
+  await delay(1500);
+  await ctx.pages()[0].bringToFront();
+  await delay(500);
+  return { pageA: ctx.pages()[0], pageB, pageC };
+}
+
+test.describe('active tab tracking', () => {
+  test('tab switch right after a burst of new tabs is not ignored', async () => {
+    const dir = makeTempDir();
+    const ctx = await launch(dir);
+
+    try {
+      const sw = await getServiceWorker(ctx);
+      const { pageC } = await setupABC(ctx);
+
+      // Quickly open several background tabs, then immediately switch tabs.
+      await sw.evaluate(async (base) => {
+        for (const id of ['x1', 'x2', 'x3']) {
+          await chrome.tabs.create({ url: `${base}/${id}`, active: false });
+        }
+      }, baseUrl);
+      await pageC.bringToFront();
+      await delay(500);
+
+      await ctx.newPage();
+      await delay(500);
+
+      const urls = await getTabUrls(sw);
+      const cIdx = urls.findIndex(u => u.endsWith('/c'));
+      expect(urls[cIdx + 1]).not.toContain(baseUrl);
+    } finally {
+      await ctx.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('new tab is placed relative to its own window after switching windows', async () => {
+    const dir = makeTempDir();
+    const ctx = await launch(dir);
+
+    try {
+      const sw = await getServiceWorker(ctx);
+      await setupABC(ctx);
+
+      // Open and use a second window, then create a tab back in the first.
+      const placed = await sw.evaluate(async (base) => {
+        const [first] = await chrome.tabs.query({ url: `${base}/a` });
+        await chrome.windows.create({ url: `${base}/w2` });
+        await new Promise(r => setTimeout(r, 500));
+        const t = await chrome.tabs.create({ windowId: first.windowId, url: `${base}/new` });
+        await new Promise(r => setTimeout(r, 500));
+        const tabs = await chrome.tabs.query({ windowId: first.windowId });
+        return tabs.sort((a, b) => a.index - b.index).map(t => t.url);
+      }, baseUrl);
+
+      expect(placed.map(u => u.split('/').pop())).toEqual(['a', 'new', 'b', 'c']);
+    } finally {
+      await ctx.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('first new tab after a service-worker restart is placed correctly', async () => {
+    const dir = makeTempDir();
+    const ctx = await launch(dir);
+
+    try {
+      const sw = await getServiceWorker(ctx);
+      await setupABC(ctx);
+
+      await sw.evaluate(() => self.__test.simulateRestart());
+
+      await ctx.newPage();
+      await delay(500);
+
+      const urls = await getTabUrls(sw);
+      expect(urls).toHaveLength(4);
+      expect(urls[0]).toContain('/a');
+      expect(urls[1]).not.toContain(baseUrl);
+      expect(urls[2]).toContain('/b');
+      expect(urls[3]).toContain('/c');
+    } finally {
+      await ctx.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+test.describe('tab groups', () => {
+  test('new tab is not moved into the middle of a group', async () => {
+    const dir = makeTempDir();
+    const ctx = await launch(dir);
+
+    try {
+      const sw = await getServiceWorker(ctx);
+      const { pageB } = await setupABC(ctx);
+
+      // Strip: [/a, (/b, /c grouped)] — activate /b, the first tab in the group.
+      const groupId = await sw.evaluate(async (base) => {
+        const tabs = await chrome.tabs.query({ currentWindow: true });
+        const ids = tabs.filter(t => /\/(b|c)$/.test(t.url)).map(t => t.id);
+        return chrome.tabs.group({ tabIds: ids });
+      }, baseUrl);
+      await pageB.bringToFront();
+      await delay(500);
+
+      // Create an ungrouped tab at the end of the strip.
+      const newId = await sw.evaluate(async (base) => {
+        const t = await chrome.tabs.create({ url: `${base}/new` });
+        return t.id;
+      }, baseUrl);
+      await delay(500);
+
+      const result = await sw.evaluate(async (id) => {
+        const tabs = await chrome.tabs.query({ currentWindow: true });
+        return {
+          urls: tabs.sort((a, b) => a.index - b.index).map(t => t.url.split('/').pop()),
+          newGroup: (await chrome.tabs.get(id)).groupId,
+        };
+      }, newId);
+
+      expect(result.newGroup).toBe(-1);
+      expect(result.urls).toEqual(['a', 'b', 'c', 'new']);
+      expect(groupId).toBeGreaterThan(-1);
     } finally {
       await ctx.close();
       fs.rmSync(dir, { recursive: true, force: true });

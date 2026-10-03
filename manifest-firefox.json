@@ -13,7 +13,8 @@
   },
   "permissions": [
     "tabs",
-    "browserSettings"
+    "browserSettings",
+    "storage"
   ],
   "manifest_version": 3,
   "content_security_policy": {}
